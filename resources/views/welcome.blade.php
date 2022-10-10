@@ -32,12 +32,24 @@
         </style>
 
         <script>
+            let genre = "";
             function getbooks(){
                 document.getElementById('output').innerHTML="Please wait...";
-                var result = '<br/><table id="htmltable" class="table table-striped"><thead><tr><th scope="col">Title</th><th scope="col">Cover</th><th scope="col">Author</th><th scope="col">Edition Number</th><th scope="col">Action</th></tr></thead><tbody>';
+                var result = '<br/><table id="htmltable" class="table table-striped"><thead><tr><th scope="col">Title</th><th scope="col">Cover</th><th scope="col">Author</th><th scope="col">Genre / Subject</th><th scope="col">Edition Number</th><th scope="col">Action</th></tr></thead><tbody>';
                 fetch("http://openlibrary.org/search.json?q="+document.getElementById("input").value).then(a => a.json()).then(response => {
                     for(var i=0; i<2; i++){
-                        result +="<tr><th>"+response.docs[i].title+"</th><td><img src='http://covers.openlibrary.org/b/isbn/"+response.docs[i].isbn[0]+"-M.jpg'></td><td>"+response.docs[i].author_name[0]+"</td><td>"+response.docs[i].edition_count+"</td><td><button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#exampleModal\" onclick=\"setBookID('"+response.docs[i].key+"','"+response.docs[i].title+"')\">Borrow</button></td></tr>";
+                        if(typeof response.docs[i].subject !== 'undefined'){
+                            const arr_genre = response.docs[i].subject;
+                            if (arr_genre.length > 0){
+                                arr_genre.forEach(function(item) {
+                                    //console.log(item);
+                                    genre += item + ", "; 
+                                });
+                                genre = genre.substring(0, genre.lastIndexOf(', '));
+                            }
+                        }
+                        result +="<tr><th>"+response.docs[i].title+"</th><td><img src='http://covers.openlibrary.org/b/isbn/"+response.docs[i].isbn[0]+"-M.jpg'></td><td>"+response.docs[i].author_name[0]+"</td><td>"+genre+"</td><td>"+response.docs[i].edition_count+"</td><td><button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#exampleModal\" onclick=\"setBookID('"+response.docs[i].key+"','"+encodeURI(response.docs[i].title)+"')\">Borrow</button></td></tr>";
+                        genre = "-";
                     }
                     result += '</tbody></table>';
                     document.getElementById('output').innerHTML=result;
@@ -52,8 +64,8 @@
             }
 
             function setBookID(val_id, val_title){
-                alert(val_id+"---"+val_title);
-                //document.getElementById('book_id').value=val_id;
+                document.getElementById('book_id').value=val_id;
+                document.getElementById('book_title').value=decodeURI(val_title);
             }
 
         </script>
@@ -74,21 +86,26 @@
         <div id="exampleModal" tabindex="-1" role="dialog" class="modal" tabindex="-1" role="dialog">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Borrow Book</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <label>Pickup date : </label>
-                    <input type="date" class="form-control" placeholder="Choose the date...">
-                    <input type="hidden" id="book_id" value="">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary">Borrow</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
+                    <div class="modal-header">
+                        <label class="modal-title">Borrow Book</label>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">x</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="input-group">
+                            <label>Email : </label>
+                            <input type="text" class="form-control" placeholder="imam@example.com">
+                        </div><br/>
+                        <div class="input-group">
+                            <label>Pickup date : </label>
+                            <input type="date" class="form-control" placeholder="Choose the date...">
+                        </div>
+                        <input type="hidden" id="book_id" value="">
+                        <input type="hidden" id="book_title" value="">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary">Borrow</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
