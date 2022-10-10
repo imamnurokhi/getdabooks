@@ -19,6 +19,8 @@
         
         <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap4.min.js"></script>
+        <!-- provide the csrf token -->
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
 
         <!-- Styles -->
         <style>
@@ -32,24 +34,47 @@
         </style>
 
         <script>
-            let genre = "";
             function getbooks(){
                 document.getElementById('output').innerHTML="Please wait...";
                 var result = '<br/><table id="htmltable" class="table table-striped"><thead><tr><th scope="col">Title</th><th scope="col">Cover</th><th scope="col">Author</th><th scope="col">Genre / Subject</th><th scope="col">Edition Number</th><th scope="col">Action</th></tr></thead><tbody>';
                 fetch("http://openlibrary.org/search.json?q="+document.getElementById("input").value).then(a => a.json()).then(response => {
-                    for(var i=0; i<2; i++){
+                    for(var i=0; i<20; i++){
+                        var genre = "";
                         if(typeof response.docs[i].subject !== 'undefined'){
                             const arr_genre = response.docs[i].subject;
                             if (arr_genre.length > 0){
                                 arr_genre.forEach(function(item) {
-                                    //console.log(item);
                                     genre += item + ", "; 
                                 });
                                 genre = genre.substring(0, genre.lastIndexOf(', '));
                             }
                         }
-                        result +="<tr><th>"+response.docs[i].title+"</th><td><img src='http://covers.openlibrary.org/b/isbn/"+response.docs[i].isbn[0]+"-M.jpg'></td><td>"+response.docs[i].author_name[0]+"</td><td>"+genre+"</td><td>"+response.docs[i].edition_count+"</td><td><button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#exampleModal\" onclick=\"setBookID('"+response.docs[i].key+"','"+encodeURI(response.docs[i].title)+"')\">Borrow</button></td></tr>";
-                        genre = "-";
+                        var img = "-";
+                        if(typeof response.docs[i].isbn !== 'undefined'){
+                            img = "<img src='http://covers.openlibrary.org/b/isbn/"+response.docs[i].isbn[0]+"-M.jpg'>";
+                        }
+
+                        var author = "-";
+                        if(typeof response.docs[i].author_name !== 'undefined'){
+                            author = response.docs[i].author_name[0];
+                        }
+
+                        var edition = "-";
+                        if(typeof response.docs[i].edition_count !== 'undefined'){
+                            edition = response.docs[i].edition_count;
+                        }
+
+                        var booktitle = "";
+                        if(typeof response.docs[i].title !== 'undefined'){
+                            booktitle = response.docs[i].title;
+                        }
+                        
+                        var bookid = "";
+                        if(typeof response.docs[i].key !== 'undefined'){
+                            bookid = response.docs[i].key;
+                        }
+                        
+                        result +="<tr><th>"+booktitle+"</th><td>"+img+"</td><td>"+author+"</td><td>"+genre+"</td><td>"+edition+"</td><td><button type=\"button\" class=\"btn btn-primary\" data-toggle=\"modal\" data-target=\"#exampleModal\" onclick=\"setBookID('"+bookid+"','"+encodeURI(booktitle)+"')\">Borrow</button></td></tr>";
                     }
                     result += '</tbody></table>';
                     document.getElementById('output').innerHTML=result;
@@ -90,24 +115,48 @@
                         <label class="modal-title">Borrow Book</label>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">x</button>
                     </div>
-                    <div class="modal-body">
-                        <div class="input-group">
-                            <label>Email : </label>
-                            <input type="text" class="form-control" placeholder="imam@example.com">
-                        </div><br/>
-                        <div class="input-group">
-                            <label>Pickup date : </label>
-                            <input type="date" class="form-control" placeholder="Choose the date...">
+                        <div class="modal-body">
+                            <div class="input-group">
+                                <label>Email : </label>
+                                <input type="text" class="form-control" id="txt_email" placeholder="imam@example.com">
+                            </div><br/>
+                            <div class="input-group">
+                                <label>Pickup date : </label>
+                                <input type="date" class="form-control" id="txt_date" value="<?php echo date("Y-m-d") ?>" placeholder="Choose the date...">
+                            </div>
+                            <input type="hidden" id="book_id" value="">
+                            <input type="hidden" id="book_title" value="">
                         </div>
-                        <input type="hidden" id="book_id" value="">
-                        <input type="hidden" id="book_title" value="">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary">Borrow</button>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" id="borrownow">Borrow</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
                 </div>
             </div>
         </div>
     </body>
+    <script>
+    $(document).ready(function () {
+        var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
+
+        $("#borrownow").click(function () {
+            $.ajax({
+                url: "/post",
+                type: 'POST',
+                data: {
+                    _token: CSRF_TOKEN,
+                    email: $("#txt_email").val(),
+                    pickup_date: $("#txt_date").val(),
+                    book_id: $("#book_id").val(),
+                    book_title: $("#book_title").val()
+                },
+                dataType: 'JSON',
+                success: function (result) {
+                    alert("Submit data successfully!");
+                    $("#exampleModal").modal('hide');
+                }
+            });
+        });
+    });
+    </script>
 </html>
